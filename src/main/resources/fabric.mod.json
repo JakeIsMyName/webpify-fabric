@@ -1,0 +1,26 @@
+{
+	"schemaVersion": 1,
+	"id": "webpify",
+	"version": "${version}",
+	"name": "WebPify",
+	"description": "Saves screenshots as lossless-compressed WebP images! Save space without losing quality!",
+	"authors": [
+		"JakeIsMyName"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/webpify/icon.png",
+	"environment": "client",
+	"entrypoints": {},
+	"mixins": [
+		"webpify.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.15.11",
+		"minecraft": ">=1.19",
+		"java": ">=17"
+	}
+}
