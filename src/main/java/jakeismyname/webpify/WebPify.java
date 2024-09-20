@@ -1,11 +1,13 @@
 package jakeismyname.webpify;
 
-import com.luciad.imageio.webp.WebPWriteParam;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gl.Framebuffer;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.system.MemoryUtil;
+
+import xyz.pary.webp.WebPFormat;
+import xyz.pary.webp.imageio.WebPImageWriteParam;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
@@ -66,9 +68,9 @@ public class WebPify {
 
 	public static void saveWebpImage(BufferedImage image, File file) throws IOException {
 		ImageWriter writer = ImageIO.getImageWritersByMIMEType("image/webp").next();
-		WebPWriteParam writeParam = new WebPWriteParam(writer.getLocale());
+		WebPImageWriteParam writeParam = new WebPImageWriteParam(writer.getLocale());
 
-		writeParam.setCompressionType(writeParam.getCompressionTypes()[WebPWriteParam.LOSSLESS_COMPRESSION]);
+		writeParam.setCompressionType(WebPFormat.LOSSLESS);
 		writeParam.setCompressionQuality(1.0f);
 
 		writer.setOutput(new FileImageOutputStream(file));
