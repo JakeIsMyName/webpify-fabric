@@ -2,10 +2,12 @@ package jakeismyname.webpify;
 
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
+import jakeismyname.webpify.mixin.NativeImageAccessor;
 import net.minecraft.client.gl.Framebuffer;
+import net.minecraft.client.texture.NativeImage;
+import org.apache.commons.io.FilenameUtils;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.system.MemoryUtil;
-
 import xyz.pary.webp.WebPFormat;
 import xyz.pary.webp.imageio.WebPImageWriteParam;
 
@@ -17,66 +19,66 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Locale;
 
 public class WebPify {
-	public static DateTimeFormatter DT_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH.mm.ss", Locale.ROOT);
+	private static final ImageWriter WEBP_WRITER;
+	private static final WebPImageWriteParam WEBP_WRITE_PARAM;
 
 	public static BufferedImage takeScreenshot(Framebuffer framebuffer) {
-		int WIDTH = framebuffer.textureWidth;
-		int HEIGHT = framebuffer.textureHeight;
+		final int WIDTH = framebuffer.textureWidth;
+		final int HEIGHT = framebuffer.textureHeight;
 
-		long size = (long) WIDTH * HEIGHT * 3;
-		long bufPointer = MemoryUtil.nmemAlloc(size);
+		final long size = (long) WIDTH * HEIGHT * 3;
+		final long bufPointer = MemoryUtil.nmemAlloc(size);
 
 		RenderSystem.bindTexture(framebuffer.getColorAttachment());
 		GlStateManager._pixelStore(GL11.GL_PACK_ALIGNMENT, 1);
 		GlStateManager._getTexImage(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGB, GL11.GL_UNSIGNED_BYTE, bufPointer);
-		ByteBuffer imageData = MemoryUtil.memByteBuffer(bufPointer, (int)size);
+		ByteBuffer imageData = MemoryUtil.memByteBuffer(bufPointer, (int) size);
 
-		int[] rgbArray = new int[WIDTH * HEIGHT];
-		int rowSize = WIDTH * 3;
-		for (int y = 0; y < HEIGHT; y++) {
-			int rowStart = (HEIGHT - 1 - y) * rowSize;
-			int arrayStart = y * WIDTH;
-			for (int x = 0; x < WIDTH; x++) {
-				int offset = rowStart + x * 3;
+		return toBufferedImage(imageData, WIDTH, HEIGHT, 3, false);
+	}
+
+	private static BufferedImage toBufferedImage(NativeImage image) {
+		final int WIDTH = image.getWidth();
+		final int HEIGHT = image.getHeight();
+		final NativeImageAccessor imageAccessor = (NativeImageAccessor)(Object)image;
+		ByteBuffer imageData = MemoryUtil.memByteBuffer(imageAccessor.getPointer(), (int) imageAccessor.getDataSize());
+		return toBufferedImage(imageData, WIDTH, HEIGHT, image.getFormat().getChannelCount(), true);
+	}
+
+	private static BufferedImage toBufferedImage(ByteBuffer imageData, int width, int height, int channels, boolean flip) {
+		final BufferedImage bufImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+		final int rowSize = width * channels;
+		for (int y = 0; y < height; y++) {
+			int rowStart = (height - 1 - y) * rowSize;
+			for (int x = 0; x < width; x++) {
+				int offset = rowStart + x * channels;
 				int r = (imageData.get(offset) & 0xFF) << 16;
 				int g = (imageData.get(offset + 1) & 0xFF) << 8;
 				int b = (imageData.get(offset + 2) & 0xFF);
-				rgbArray[arrayStart + x] = r | g | b;
+				bufImage.setRGB(x, flip ? (height - 1) - y : y, r | g | b);
 			}
 		}
-
-		BufferedImage bufImage = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
-		bufImage.setRGB(0, 0, WIDTH, HEIGHT, rgbArray, 0, WIDTH);
 
 		return bufImage;
 	}
 
-	public static File getWebpScreenshotFilename(File dir) {
-		String baseName = DT_FORMATTER.format(ZonedDateTime.now());
-		int i = 1;
-		while (true) {
-			File file = new File(dir, baseName + (i > 1 ? i : "") + ".webp");
-			if (!file.exists()) return file;
-			else i++;
-		}
+	public static void saveWebpImage(NativeImage image, File file) throws IOException {
+		saveWebpImage(toBufferedImage(image), file);
 	}
 
 	public static void saveWebpImage(BufferedImage image, File file) throws IOException {
-		ImageWriter writer = ImageIO.getImageWritersByMIMEType("image/webp").next();
-		WebPImageWriteParam writeParam = new WebPImageWriteParam(writer.getLocale());
+		WEBP_WRITER.setOutput(new FileImageOutputStream(new File(FilenameUtils.removeExtension(file.toString()) + ".webp")));
+		WEBP_WRITER.write(null, new IIOImage(image, null, null), WEBP_WRITE_PARAM);
+		WEBP_WRITER.reset();
+	}
 
-		writeParam.setCompressionType(WebPFormat.LOSSLESS);
-		writeParam.setCompressionQuality(1.0f);
-
-		writer.setOutput(new FileImageOutputStream(file));
-
-		writer.write(null, new IIOImage(image, null, null), writeParam);
-		writer.dispose();
+	static {
+		WEBP_WRITER = ImageIO.getImageWritersByMIMEType("image/webp").next();
+		WEBP_WRITE_PARAM = new WebPImageWriteParam(null);
+		WEBP_WRITE_PARAM.setCompressionType(WebPFormat.LOSSLESS);
+		WEBP_WRITE_PARAM.setCompressionQuality(0.0f);
 	}
 
 }

@@ -1,11 +1,12 @@
 {
-	"required": true,
-	"package": "jakeismyname.webpify.mixin",
-	"compatibilityLevel": "JAVA_17",
-	"client": [
-		"ScreenshotRecorderMixin"
-	],
-	"injectors": {
-		"defaultRequire": 1
-	}
+  "required": true,
+  "package": "jakeismyname.webpify.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+	"NativeImageAccessor",
+	"ScreenshotRecorderMixin"
+  ],
+  "injectors": {
+	"defaultRequire": 1
+  }
 }

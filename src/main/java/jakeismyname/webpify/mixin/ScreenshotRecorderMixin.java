@@ -1,56 +1,32 @@
 package jakeismyname.webpify.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import jakeismyname.webpify.WebPify;
-import net.minecraft.client.gl.Framebuffer;
+import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.util.ScreenshotRecorder;
-import net.minecraft.text.ClickEvent;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Util;
-import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.spongepowered.asm.mixin.Final;
+import org.apache.commons.io.FilenameUtils;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Overwrite;
-import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.util.function.Consumer;
 
 @Mixin(ScreenshotRecorder.class)
 public abstract class ScreenshotRecorderMixin {
+	@WrapOperation(method = "method_1661", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/texture/NativeImage;writeTo(Ljava/io/File;)V"))
+	private static void webpify$writeWebP(NativeImage image, File path, Operation<Void> original) throws IOException {
+		if (FilenameUtils.getExtension(path.toString()).equals("webp")) {
+			WebPify.saveWebpImage(image, path);
+		} else {
+			original.call(image, path);
+		}
+	}
 
-    @Shadow @Final private static Logger LOGGER;
-
-    /**
-     * @author JakeIsMyName
-     * @reason Save WebP screenshots instead of PNG
-     */
-    @Overwrite
-    private static void saveScreenshotInner(File gameDirectory, @Nullable String fileName, Framebuffer framebuffer, Consumer<Text> messageReceiver) throws IOException {
-        BufferedImage screenshot = WebPify.takeScreenshot(framebuffer);
-        File screenshotsDir = new File(gameDirectory, "screenshots");
-        screenshotsDir.mkdir();
-
-        File output;
-        if (fileName != null) output = new File(screenshotsDir, fileName);
-        else output = WebPify.getWebpScreenshotFilename(screenshotsDir);
-
-        Util.getIoWorkerExecutor().execute(() -> {
-            try {
-                WebPify.saveWebpImage(screenshot, output);
-                Text text = Text.literal(output.getName()).formatted(Formatting.UNDERLINE).styled((style) ->
-                        style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_FILE, output.getAbsolutePath()))
-                );
-                messageReceiver.accept(Text.translatable("screenshot.success", text));
-            } catch (Exception e) {
-                LOGGER.warn("Failed to save screenshot", e);
-                messageReceiver.accept(Text.translatable("screenshot.failure", e.getMessage()));
-            }
-        });
-
-    }
+	@ModifyArg(method = "getScreenshotFilename", at = @At(value = "INVOKE", target = "Ljava/io/File;<init>(Ljava/io/File;Ljava/lang/String;)V"), index = 1)
+	private static String webpify$WebPFilename(String file) {
+		return file.replace("png", "webp");
+	}
 
 }
