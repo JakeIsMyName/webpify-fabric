@@ -7,8 +7,7 @@ import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.util.ScreenshotRecorder;
 import org.apache.commons.io.FilenameUtils;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.ModifyArg;
+import org.spongepowered.asm.mixin.injection.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,7 +25,7 @@ public abstract class ScreenshotRecorderMixin {
 
 	@ModifyArg(method = "getScreenshotFilename", at = @At(value = "INVOKE", target = "Ljava/io/File;<init>(Ljava/io/File;Ljava/lang/String;)V"), index = 1)
 	private static String webpify$WebPFilename(String file) {
-		return file.replace("png", "webp");
+		return file.substring(0, file.lastIndexOf('.')) + ".webp";
 	}
 
 }
